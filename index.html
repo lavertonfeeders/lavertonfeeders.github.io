@@ -2,46 +2,206 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laverton Feeders - connection test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Feeders">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Laverton Feeders</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  body { font-family: -apple-system, Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-  pre { background: #f2f2f2; padding: 12px; white-space: pre-wrap; word-break: break-word; }
+html,body{height:100%;margin:0;font-family:-apple-system,Arial,sans-serif;overflow:hidden}
+#map{position:absolute;inset:0}
+#bar{position:absolute;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:rgba(0,0,0,.6);color:#fff}
+#bar b{flex:1;font-size:17px}
+.b{border:0;border-radius:10px;padding:10px 14px;font-size:16px;background:#fff;color:#111}
+.b.p{background:#1a73e8;color:#fff}
+#legend{position:absolute;left:8px;bottom:calc(env(safe-area-inset-bottom) + 36px);z-index:900;background:rgba(255,255,255,.92);border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.6}
+#legend i,.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+#mt{position:absolute;left:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:900}
+#mt img{height:22px}
+#loc{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 40px);z-index:900;width:52px;height:52px;border-radius:50%;font-size:24px;border:0;background:#fff;box-shadow:0 1px 6px #0006}
+.pin{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px #000a;color:#fff;font:bold 13px/24px sans-serif;text-align:center;box-sizing:border-box}
+.green{background:#2e9e3e}.amber{background:#f5a623}.red{background:#d93025}.purple{background:#7b3fb5}.grey{background:#888}
+.pin.amber{color:#222}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:1100;background:#fff;border-radius:16px 16px 0 0;max-height:78%;overflow:auto;padding:14px 14px calc(env(safe-area-inset-bottom) + 14px);display:none;box-shadow:0 -2px 12px #0005}
+#sheet h2{margin:0 0 4px;font-size:21px}
+.sub{color:#555;font-size:14px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.st{min-height:68px;font-size:19px;font-weight:700;border:3px solid #ccc;border-radius:14px;background:#f5f5f5;color:#111}
+.st.on{border-color:#111;background:#ffe9a8}
+textarea{width:100%;box-sizing:border-box;font-size:16px;padding:8px;border-radius:8px;border:1px solid #bbb}
+.send{width:100%;min-height:56px;font-size:20px;font-weight:700;margin-top:10px;border:0;border-radius:14px;background:#1a73e8;color:#fff}
+.send:disabled{background:#9bb}
+.row{display:flex;gap:8px;margin-top:10px}.row .b{flex:1;border:1px solid #bbb;text-align:center;text-decoration:none}
+.hist div{border-top:1px solid #ddd;padding:6px 0;font-size:14px}
+#list,#login{position:absolute;inset:0;z-index:1200;background:#fff;overflow:auto;display:none}
+#list .hd{position:sticky;top:0;background:#fff;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;display:flex;align-items:center;border-bottom:1px solid #ddd}
+#list .hd b{flex:1;font-size:18px}
+.it{display:flex;align-items:center;padding:14px 12px;border-bottom:1px solid #eee;font-size:16px}
+.it small{display:block;color:#666}
+#login{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+#toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 60px);transform:translateX(-50%);z-index:1300;background:#222;color:#fff;padding:10px 16px;border-radius:10px;display:none;max-width:85%}
 </style>
 </head>
 <body>
-<h2>Laverton Feeders - connection test</h2>
-<div id="signin"></div>
-<pre id="out">Waiting for sign-in...</pre>
+<div id="map"></div>
+<div id="bar"><b id="title">Laverton Feeders</b><button class="b" id="bList">List</button><button class="b" id="bRef">Refresh</button></div>
+<div id="legend"></div>
+<a id="mt" href="https://www.maptiler.com" target="_blank"><img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler"></a>
+<button id="loc" aria-label="My location">&#9678;</button>
+<div id="sheet"></div>
+<div id="list"></div>
+<div id="toast"></div>
+<div id="login"><h1>Laverton Feeders</h1><p id="lmsg">Sign in with your approved Google account.</p><div id="gbtn"></div></div>
 <script>
 const CLIENT_ID = '75294971655-rf219k0nsb1p29m3crfsngfrp93hun75.apps.googleusercontent.com';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyANFbEURgEzJG7E69dJ6QEWa642JcHvZ-j2kir0iMjw-6ywOL4eU5iP8okvUeZQbQTgA/exec';
-const out = document.getElementById('out');
+const MAPTILER_KEY = 'ieHRqhOy74WjDzrVwOBm';
+const STATUSES = ['Full', 'Part full', 'Empty', 'No more corn'];
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let token = null, data = null, markers = [], myPos = null, me = null, meCircle = null, watching = false, fitted = false;
 
+const map = L.map('map', { zoomControl: false }).setView([54.5, -3], 6);
+L.tileLayer('https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=' + MAPTILER_KEY, {
+  maxZoom: 20, maxNativeZoom: 19,
+  attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors'
+}).addTo(map);
+map.on('click', closeSheet);
+
+function toast(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; setTimeout(() => e.style.display = 'none', 3500); }
+function ago(d) { return d == null ? '' : d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; }
+function when(iso) { return new Date(iso).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+function dist(f) {
+  if (!myPos || f.lat == null) return '';
+  const R = 6371000, r = Math.PI / 180, dLa = (f.lat - myPos.lat) * r, dLn = (f.lng - myPos.lng) * r;
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(myPos.lat * r) * Math.cos(f.lat * r) * Math.sin(dLn / 2) ** 2;
+  const m = 2 * R * Math.asin(Math.sqrt(a));
+  return m < 1000 ? Math.round(m) + ' m away' : (m / 1000).toFixed(1) + ' km away';
+}
+function lastLine(f) { return f.latest ? esc(f.latest.status) + ' &middot; ' + ago(f.daysAgo) + (f.latest.by ? ' &middot; ' + esc(f.latest.by) : '') : 'No reports yet'; }
+
+// ---- sign-in and server calls ----
+function showLogin(msg) { if (msg) $('lmsg').textContent = msg; $('login').style.display = 'flex'; token = null; }
 function start() {
   if (!(window.google && google.accounts && google.accounts.id)) { setTimeout(start, 200); return; }
-  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onSignIn });
-  google.accounts.id.renderButton(document.getElementById('signin'), { theme: 'outline', size: 'large' });
+  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onSignIn, auto_select: true });
+  google.accounts.id.renderButton($('gbtn'), { theme: 'filled_blue', size: 'large' });
+}
+async function onSignIn(resp) {
+  token = resp.credential;
+  try { await load(); $('login').style.display = 'none'; } catch (e) { showLogin(e.message); }
+}
+async function api(action, params) {
+  const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ idToken: token, action: action, params: params || {} }) });
+  const j = await r.json();
+  if (!j.ok) { const e = new Error(j.message); e.code = j.error; if (j.error === 'auth') showLogin('Please sign in again.'); throw e; }
+  return j.data;
 }
 
-async function onSignIn(resp) {
-  out.textContent = 'Signed in with Google. Asking the server...';
-  try {
-    const r = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ idToken: resp.credential, action: 'getData', params: {} })
-    });
-    const j = await r.json();
-    if (!j.ok) { out.textContent = 'Server says: ' + j.message + ' (' + j.error + ')'; return; }
-    out.textContent = 'SUCCESS\nSigned in as ' + j.data.user.name + ' (' + j.data.user.email +
-      ')\nRole: ' + j.data.user.role + '\nFeeders visible: ' + j.data.feeders.length;
-  } catch (e) {
-    out.textContent = 'Connection problem: ' + e;
-  }
+// ---- map and pins ----
+async function load() {
+  data = await api('getData');
+  $('title').textContent = data.config.appName;
+  const c = data.config;
+  $('legend').innerHTML = '<div><i class="green"></i>Full / part full, up to ' + c.greenDays + ' days</div>' +
+    '<div><i class="amber"></i>Full / part full, ' + (c.greenDays + 1) + '&ndash;' + c.amberDays + ' days</div>' +
+    '<div><i class="red"></i>No report, or older than ' + c.amberDays + ' days</div>' +
+    '<div><i class="purple"></i>Empty / no more corn</div>';
+  markers.forEach(m => m.remove()); markers = [];
+  data.feeders.forEach(f => {
+    if (f.lat == null || f.lng == null) return;
+    const n = (f.id.match(/\d+/) || [f.id])[0].replace(/^0+/, '');
+    const icon = L.divIcon({ className: '', html: '<div class="pin ' + f.colour + '">' + esc(n) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+    markers.push(L.marker([f.lat, f.lng], { icon: icon }).addTo(map).on('click', ev => { L.DomEvent.stopPropagation(ev); openSheet(f.id); }));
+  });
+  if (!fitted && markers.length) { map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3), { maxZoom: 17 }); fitted = true; }
 }
+
+// ---- GPS ----
+function locate() {
+  if (!navigator.geolocation) return toast('GPS is not available on this device');
+  if (watching) { if (myPos) map.setView([myPos.lat, myPos.lng], Math.max(map.getZoom(), 17)); return; }
+  watching = true;
+  navigator.geolocation.watchPosition(p => {
+    const first = !myPos;
+    myPos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+    if (!me) { me = L.circleMarker([myPos.lat, myPos.lng], { radius: 8, color: '#fff', weight: 3, fillColor: '#1a73e8', fillOpacity: 1 }).addTo(map);
+      meCircle = L.circle([myPos.lat, myPos.lng], { radius: myPos.acc, color: '#1a73e8', weight: 1, fillOpacity: 0.1 }).addTo(map); }
+    me.setLatLng([myPos.lat, myPos.lng]); meCircle.setLatLng([myPos.lat, myPos.lng]).setRadius(myPos.acc);
+    if (first) map.setView([myPos.lat, myPos.lng], Math.max(map.getZoom(), 17));
+  }, e => { watching = false; toast('Location unavailable: ' + e.message); }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+}
+function getPos() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }), () => res(null),
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 });
+  });
+}
+
+// ---- feeder sheet: details, report, history, directions ----
+function closeSheet() { $('sheet').style.display = 'none'; }
+function openSheet(id) {
+  const f = data.feeders.find(x => x.id === id); if (!f) return;
+  let sel = null;
+  const s = $('sheet');
+  const dest = f.lat + ',' + f.lng;
+  s.innerHTML = '<h2><span class="dot ' + f.colour + '"></span>' + esc(f.name) + '</h2>' +
+    '<div class="sub">' + lastLine(f) + (dist(f) ? ' &middot; ' + dist(f) : '') + (f.notes ? '<br>' + esc(f.notes) : '') + '</div>' +
+    '<div class="grid">' + STATUSES.map(t => '<button class="st" data-s="' + t + '">' + t + '</button>').join('') + '</div>' +
+    '<textarea id="note" rows="2" maxlength="500" placeholder="Optional note"></textarea>' +
+    '<button class="send" id="send" disabled>Send report</button><div class="sub" id="msg"></div>' +
+    '<div class="row"><a class="b" href="https://maps.apple.com/?daddr=' + dest + '&dirflg=w" target="_blank">Apple Maps</a>' +
+    '<a class="b" href="https://www.google.com/maps/dir/?api=1&destination=' + dest + '&travelmode=walking" target="_blank">Google Maps</a></div>' +
+    '<div class="row"><button class="b" id="hist">Previous reports</button><button class="b" id="close">Close</button></div><div class="hist" id="histbox"></div>';
+  s.style.display = 'block';
+  s.querySelectorAll('.st').forEach(b => b.onclick = () => {
+    sel = b.dataset.s; s.querySelectorAll('.st').forEach(x => x.classList.toggle('on', x === b)); $('send').disabled = false; });
+  $('close').onclick = closeSheet;
+  $('hist').onclick = async () => {
+    $('histbox').textContent = 'Loading...';
+    try {
+      const h = await api('getHistory', { feederId: f.id, limit: 30 });
+      $('histbox').innerHTML = h.length ? h.map(r => '<div><b>' + esc(r.status) + '</b> &middot; ' + when(r.reportedAt) + ' &middot; ' + esc(r.by) + ' (' + esc(r.type) + ')' + (r.note ? '<br>' + esc(r.note) : '') + '</div>').join('') : 'No reports yet.';
+    } catch (e) { $('histbox').textContent = e.message; }
+  };
+  $('send').onclick = async () => {
+    const b = $('send'); b.disabled = true; $('msg').textContent = 'Sending...';
+    const pos = await getPos();
+    try {
+      const r = await api('submitReport', { feederId: f.id, status: sel, note: $('note').value,
+        gpsLat: pos ? pos.lat : null, gpsLng: pos ? pos.lng : null, gpsAccuracy: pos ? pos.acc : null });
+      toast('Report saved (' + r.reportType + ')'); closeSheet(); await load();
+    } catch (e) { $('msg').textContent = 'NOT SENT: ' + e.message + ' Check your signal and tap Send again.'; b.disabled = false; }
+  };
+}
+
+// ---- feeder list ----
+function openList() {
+  const l = $('list');
+  const rows = data.feeders.slice().sort((a, b) => a.name.localeCompare(b.name)).map(f =>
+    '<div class="it" data-id="' + esc(f.id) + '"><span class="dot ' + f.colour + '"></span><div>' + esc(f.name) +
+    '<small>' + lastLine(f) + (dist(f) ? ' &middot; ' + dist(f) : '') + '</small></div></div>').join('');
+  l.innerHTML = '<div class="hd"><b>Feeders (' + data.feeders.length + ')</b><button class="b" id="lc">Close</button></div>' + (rows || '<p style="padding:12px">No feeders yet.</p>');
+  l.style.display = 'block';
+  $('lc').onclick = () => l.style.display = 'none';
+  l.querySelectorAll('.it').forEach(e => e.onclick = () => {
+    l.style.display = 'none'; const f = data.feeders.find(x => x.id === e.dataset.id);
+    if (f && f.lat != null) map.setView([f.lat, f.lng], 18); openSheet(e.dataset.id); });
+}
+
+$('bList').onclick = () => data && openList();
+$('bRef').onclick = async () => { try { await load(); toast('Updated'); } catch (e) { toast(e.message); } };
+$('loc').onclick = locate;
+try { navigator.permissions.query({ name: 'geolocation' }).then(r => { if (r.state === 'granted') locate(); }); } catch (e) {}
 start();
 </script>
 </body>
 </html>
+
+
