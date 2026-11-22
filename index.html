@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laverton Feeders - connection test</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  body { font-family: -apple-system, Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+  pre { background: #f2f2f2; padding: 12px; white-space: pre-wrap; word-break: break-word; }
+</style>
+</head>
+<body>
+<h2>Laverton Feeders - connection test</h2>
+<div id="signin"></div>
+<pre id="out">Waiting for sign-in...</pre>
+<script>
+const CLIENT_ID = '75294971655-rf219k0nsb1p29m3crfsngfrp93hun75.apps.googleusercontent.com';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyANFbEURgEzJG7E69dJ6QEWa642JcHvZ-j2kir0iMjw-6ywOL4eU5iP8okvUeZQbQTgA/exec';
+const out = document.getElementById('out');
+
+function start() {
+  if (!(window.google && google.accounts && google.accounts.id)) { setTimeout(start, 200); return; }
+  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onSignIn });
+  google.accounts.id.renderButton(document.getElementById('signin'), { theme: 'outline', size: 'large' });
+}
+
+async function onSignIn(resp) {
+  out.textContent = 'Signed in with Google. Asking the server...';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ idToken: resp.credential, action: 'getData', params: {} })
+    });
+    const j = await r.json();
+    if (!j.ok) { out.textContent = 'Server says: ' + j.message + ' (' + j.error + ')'; return; }
+    out.textContent = 'SUCCESS\nSigned in as ' + j.data.user.name + ' (' + j.data.user.email +
+      ')\nRole: ' + j.data.user.role + '\nFeeders visible: ' + j.data.feeders.length;
+  } catch (e) {
+    out.textContent = 'Connection problem: ' + e;
+  }
+}
+start();
+</script>
+</body>
+</html>
