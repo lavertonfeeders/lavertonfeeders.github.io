@@ -117,8 +117,9 @@ async function load() {
   markers.forEach(m => m.remove()); markers = [];
   data.feeders.forEach(f => {
     if (f.lat == null || f.lng == null) return;
-    const const n = f.id;
-    const icon = L.divIcon({ className: '', html: '<div class="pin ' + f.colour + '">' + esc(n) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+    const n = String(f.id);
+    const icon = L.divIcon({ className: '', html: '<div class="pin ' + f.colour + '" style="font-size:' + (n.length > 3 ? 9 : n.length > 2 ? 10 : 13) + 'px">' + esc(n) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+
     markers.push(L.marker([f.lat, f.lng], { icon: icon }).addTo(map).on('click', ev => { L.DomEvent.stopPropagation(ev); openSheet(f.id); }));
   });
   if (!fitted && markers.length) { map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3), { maxZoom: 17 }); fitted = true; }
